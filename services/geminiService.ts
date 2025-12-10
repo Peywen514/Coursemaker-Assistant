@@ -4,10 +4,17 @@ import { CourseInfo, PainPoint, SlideContent, VideoScriptScene } from "../types"
 // Helper to get client - assumes process.env.API_KEY is available (default env)
 const getClient = () => {
   const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    console.warn("API Key is missing in process.env. Ensure the environment is configured correctly.");
-  }
+  // Note: If apiKey is missing in production, calls will fail with 400/403.
+  // The UI should handle explaining this to the user.
   return new GoogleGenAI({ apiKey: apiKey || 'dummy-key-for-now' });
+};
+
+// Helper to clean JSON string from Markdown code blocks
+const cleanJson = (text: string | undefined): string => {
+  if (!text) return "[]";
+  // Remove ```json and ``` wrapping if present
+  let cleaned = text.replace(/```json/g, '').replace(/```/g, '');
+  return cleaned.trim();
 };
 
 /**
@@ -71,7 +78,12 @@ export const analyzeCourseAndGetPainPoints = async (course: CourseInfo): Promise
     },
   });
 
-  return JSON.parse(response.text || "[]");
+  try {
+    return JSON.parse(cleanJson(response.text));
+  } catch (e) {
+    console.error("JSON Parse Error", e, response.text);
+    throw new Error("Failed to parse AI response");
+  }
 };
 
 /**
@@ -122,7 +134,7 @@ export const generateLazyPackContent = async (course: CourseInfo, painPoint: Pai
     },
   });
 
-  return JSON.parse(response.text || "[]");
+  return JSON.parse(cleanJson(response.text));
 };
 
 /**
@@ -198,7 +210,7 @@ export const generateVideoScript = async (course: CourseInfo, painPoint: PainPoi
         }
     });
 
-    return JSON.parse(response.text || "[]");
+    return JSON.parse(cleanJson(response.text));
 }
 
 /**

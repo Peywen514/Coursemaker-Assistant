@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CourseInfo, PainPoint, SlideData, VideoScriptScene } from '../types';
 import { generateLazyPackContent, generateSlideBackground, generateVideoScript, generateMarketingVideo } from '../services/geminiService';
-import { Image as ImageIcon, Video, Download, RefreshCw, Layers, Film, FileText, Copy, TrendingUp } from 'lucide-react';
+import { Image as ImageIcon, Video, Download, RefreshCw, Layers, Film, FileText, Copy, TrendingUp, Check } from 'lucide-react';
 
 interface Props {
   course: CourseInfo;
@@ -15,10 +15,12 @@ const ContentGenerator: React.FC<Props> = ({ course, painPoint, onBack }) => {
   // Lazy Pack State
   const [slides, setSlides] = useState<SlideData[]>([]);
   const [isGeneratingText, setIsGeneratingText] = useState(false);
+  const [copiedCaption, setCopiedCaption] = useState(false);
   
   // Video Script State
   const [script, setScript] = useState<VideoScriptScene[]>([]);
   const [isScriptLoading, setIsScriptLoading] = useState(false);
+  const [copiedScript, setCopiedScript] = useState(false);
   
   // Veo State
   const [veoPrompt, setVeoPrompt] = useState("");
@@ -94,6 +96,33 @@ const ContentGenerator: React.FC<Props> = ({ course, painPoint, onBack }) => {
         return updated;
       });
     }
+  };
+
+  const handleDownloadImage = (base64: string | undefined, index: number) => {
+    if (!base64) return;
+    const link = document.createElement('a');
+    link.href = base64;
+    link.download = `104-course-slide-${index + 1}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCopyCaption = () => {
+    const caption = slides.map((s, i) => `【Slide ${i+1}】${s.content.headline}\n${s.content.subtext}`).join('\n\n') 
+      + `\n\n👇 立即搜尋課程：${course.title}\n`
+      + `\n#${painPoint.seoKeywords.join(' #')} #104學習精靈 #職涯發展`;
+    
+    navigator.clipboard.writeText(caption);
+    setCopiedCaption(true);
+    setTimeout(() => setCopiedCaption(false), 2000);
+  };
+
+  const handleCopyScript = () => {
+    const text = script.map(s => `[${s.scene}] (Visual: ${s.visual}) -> Audio: ${s.audio}`).join('\n\n');
+    navigator.clipboard.writeText(text);
+    setCopiedScript(true);
+    setTimeout(() => setCopiedScript(false), 2000);
   };
 
   const handleGenerateVeoVideo = async () => {
@@ -184,7 +213,21 @@ const ContentGenerator: React.FC<Props> = ({ course, painPoint, onBack }) => {
         {/* Main Content Area */}
         <div className="lg:col-span-2">
           {activeTab === 'lazypack' && (
-            <div className="space-y-8">
+            <div className="space-y-6">
+               <div className="flex justify-between items-center bg-orange-50 p-4 rounded-xl border border-orange-100">
+                  <div>
+                    <h3 className="font-bold text-orange-900">Instagram/FB Carousel</h3>
+                    <p className="text-xs text-orange-700">5 slides optimized for engagement</p>
+                  </div>
+                  <button 
+                    onClick={handleCopyCaption}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-orange-200 text-orange-700 rounded-lg text-sm font-bold hover:bg-orange-100 transition shadow-sm"
+                  >
+                    {copiedCaption ? <Check size={16} /> : <Copy size={16} />}
+                    {copiedCaption ? 'Copied!' : 'Copy Full Caption'}
+                  </button>
+               </div>
+
                {isGeneratingText ? (
                  <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl">
                     <RefreshCw className="animate-spin text-orange-500 w-10 h-10 mb-4" />
@@ -196,13 +239,22 @@ const ContentGenerator: React.FC<Props> = ({ course, painPoint, onBack }) => {
                       <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                         <span className="font-bold text-gray-700">Slide {index + 1}</span>
                         <div className="flex gap-2">
+                          {slide.backgroundImage && (
+                            <button
+                              onClick={() => handleDownloadImage(slide.backgroundImage, index)}
+                              className="flex items-center gap-1 text-sm bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full hover:bg-gray-300 transition"
+                              title="Download Image"
+                            >
+                                <Download size={14} />
+                            </button>
+                          )}
                           <button 
                             onClick={() => handleGenerateImage(index)}
                             disabled={slide.isGeneratingImage}
                             className="flex items-center gap-1 text-sm bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-full hover:bg-indigo-200 transition disabled:opacity-50"
                           >
                             <ImageIcon size={14} /> 
-                            {slide.backgroundImage ? 'Regenerate Art' : 'Generate Art'}
+                            {slide.backgroundImage ? 'Regenerate' : 'Generate Art'}
                           </button>
                         </div>
                       </div>
@@ -249,8 +301,8 @@ const ContentGenerator: React.FC<Props> = ({ course, painPoint, onBack }) => {
                         </div>
                       </div>
                       
-                      <div className="p-4 bg-gray-50 text-xs text-gray-400">
-                        Visual Concept: {slide.content.visualPrompt}
+                      <div className="p-4 bg-gray-50 text-xs text-gray-400 border-t border-gray-100 flex justify-between">
+                         <span>Visual Concept: {slide.content.visualPrompt}</span>
                       </div>
                     </div>
                  ))
@@ -262,16 +314,25 @@ const ContentGenerator: React.FC<Props> = ({ course, painPoint, onBack }) => {
             <div className="space-y-8">
                {/* 1. Script Generator (Main Free Feature) */}
                <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-                  <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-white">
-                      <div className="flex items-center gap-3 mb-2">
-                          <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
-                              <FileText size={20} />
-                          </div>
-                          <h3 className="text-xl font-bold text-gray-800">Short Video Script (Reels/TikTok)</h3>
+                  <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-white flex justify-between items-center">
+                      <div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
+                                <FileText size={20} />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800">Short Video Script</h3>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                            High-retention script designed for <b>{painPoint.targetGroup}</b>.
+                        </p>
                       </div>
-                      <p className="text-sm text-gray-600">
-                          High-retention script designed for <b>{painPoint.targetGroup}</b>.
-                      </p>
+                      <button 
+                         onClick={handleCopyScript}
+                         className="flex items-center gap-2 text-sm bg-purple-100 text-purple-700 px-4 py-2 rounded-lg font-bold hover:bg-purple-200 transition"
+                      >
+                         {copiedScript ? <Check size={16} /> : <Copy size={16} />}
+                         {copiedScript ? 'Copied' : 'Copy Script'}
+                      </button>
                   </div>
 
                   <div className="p-6">
@@ -299,12 +360,6 @@ const ContentGenerator: React.FC<Props> = ({ course, painPoint, onBack }) => {
                                       </div>
                                   </div>
                               ))}
-                              
-                              <div className="pt-4 flex justify-end">
-                                  <button className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-800 font-medium transition">
-                                      <Copy size={16} /> Copy Script
-                                  </button>
-                              </div>
                           </div>
                       )}
                   </div>
