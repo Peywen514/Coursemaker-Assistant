@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CourseInfo, PainPoint, AppState } from './types';
 import CourseInput from './components/CourseInput';
 import StrategySelector from './components/StrategySelector';
 import ContentGenerator from './components/ContentGenerator';
-import { analyzeCourseAndGetPainPoints, setCustomApiKey } from './services/geminiService';
-import { Sparkles, AlertCircle, Settings, ExternalLink, Key } from 'lucide-react';
+import { analyzeCourseAndGetPainPoints, setCustomApiKey, hasStoredKey, removeCustomApiKey } from './services/geminiService';
+import { Sparkles, AlertCircle, Settings, ExternalLink, Key, Trash2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(AppState.INPUT_COURSE);
@@ -17,6 +17,13 @@ const App: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isApiKeyError, setIsApiKeyError] = useState(false);
   const [tempApiKey, setTempApiKey] = useState("");
+  
+  // UI State for Key Management
+  const [keyIsSaved, setKeyIsSaved] = useState(false);
+
+  useEffect(() => {
+    setKeyIsSaved(hasStoredKey());
+  }, []);
 
   const handleCourseSubmit = async (info: CourseInfo) => {
     setIsLoading(true);
@@ -34,7 +41,7 @@ const App: React.FC = () => {
       let msg = "Analysis failed. Please try again later.";
       let isKeyError = false;
 
-      // Detect API Key specific errors (400 Bad Request usually means invalid key, 403 means permission)
+      // Detect API Key specific errors
       if (error.message?.includes('400') || error.message?.includes('403') || error.message?.includes('API key')) {
         msg = "API Key Configuration Missing or Invalid";
         isKeyError = true;
@@ -54,13 +61,23 @@ const App: React.FC = () => {
     if (!tempApiKey.trim()) return;
     
     setCustomApiKey(tempApiKey.trim());
+    setKeyIsSaved(true);
     setErrorMessage(null);
     setIsApiKeyError(false);
-    alert("API Key updated temporarily. Please try clicking 'Analyze Marketing Strategy' again.");
+    alert("API Key saved to browser! You can now use the app.");
   };
 
-  const handlePainPointSelect = (pp: PainPoint) => {
-    setSelectedPainPoint(pp);
+  const handleResetKey = () => {
+    if(window.confirm("Are you sure you want to remove the saved API Key?")) {
+        removeCustomApiKey();
+        setKeyIsSaved(false);
+        setTempApiKey("");
+        window.location.reload();
+    }
+  };
+
+  const handlePainPointSelect = (painPoint: PainPoint) => {
+    setSelectedPainPoint(painPoint);
     setAppState(AppState.GENERATE_CONTENT);
   };
 
@@ -75,8 +92,19 @@ const App: React.FC = () => {
             </div>
             <span className="font-bold text-xl tracking-tight">CourseMarketer <span className="text-orange-600">AI</span></span>
           </div>
-          <div className="text-sm text-gray-500 font-medium hidden sm:block">
-             For 104 Learning Platform
+          <div className="flex items-center gap-4">
+             {keyIsSaved && (
+                 <button 
+                   onClick={handleResetKey}
+                   className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition"
+                   title="Remove saved API Key"
+                 >
+                    <Trash2 size={14} /> Reset Key
+                 </button>
+             )}
+             <div className="text-sm text-gray-500 font-medium hidden sm:block">
+                For 104 Learning Platform
+             </div>
           </div>
         </div>
       </nav>
@@ -96,15 +124,15 @@ const App: React.FC = () => {
                 
                 {isApiKeyError ? (
                   <div className="mt-3 text-sm text-orange-800 space-y-3">
-                    <p>The application cannot access the Google Gemini API. This is usually because the environment variable is missing.</p>
+                    <p>The application cannot access the Google Gemini API.</p>
                     
                     {/* Manual Entry Fallback */}
                     <div className="bg-white p-4 rounded-lg border border-orange-200 shadow-sm mt-3">
                         <h4 className="font-bold flex items-center gap-2 mb-2 text-orange-900">
-                           <Key size={16} /> Fast Fix: Enter Key Temporarily
+                           <Key size={16} /> Enter API Key Once (Saved in Browser)
                         </h4>
                         <p className="mb-3 text-xs text-orange-700">
-                           Can't find the Deploy button? Paste your key here to test the app immediately without redeploying.
+                           We will save this key to your browser's local storage so you don't have to enter it again.
                         </p>
                         <form onSubmit={handleManualKeySubmit} className="flex gap-2">
                            <input 
@@ -118,7 +146,7 @@ const App: React.FC = () => {
                              type="submit"
                              className="bg-orange-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-orange-700 transition"
                            >
-                             Save & Retry
+                             Save Key
                            </button>
                         </form>
                     </div>

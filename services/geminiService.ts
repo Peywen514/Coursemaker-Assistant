@@ -1,18 +1,33 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { CourseInfo, PainPoint, SlideContent, VideoScriptScene } from "../types";
 
-// Variable to store manually entered key
-let customApiKey: string | null = null;
+const STORAGE_KEY = "coursemarketer_api_key";
+
+// Initialize customApiKey from LocalStorage if available
+let customApiKey: string | null = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
 
 export const setCustomApiKey = (key: string) => {
   customApiKey = key;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY, key);
+  }
+};
+
+export const removeCustomApiKey = () => {
+  customApiKey = null;
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+};
+
+export const hasStoredKey = (): boolean => {
+  return !!customApiKey;
 };
 
 // Helper to get client - checks manual key first, then environment variable
 const getClient = () => {
   const apiKey = customApiKey || process.env.API_KEY;
   // Note: If apiKey is missing in production, calls will fail with 400/403.
-  // The UI should handle explaining this to the user.
   return new GoogleGenAI({ apiKey: apiKey || 'dummy-key-for-now' });
 };
 
