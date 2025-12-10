@@ -1,9 +1,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { CourseInfo, PainPoint, SlideContent, VideoScriptScene } from "../types";
 
-// Helper to get client - assumes process.env.API_KEY is available (default env)
+// Variable to store manually entered key
+let customApiKey: string | null = null;
+
+export const setCustomApiKey = (key: string) => {
+  customApiKey = key;
+};
+
+// Helper to get client - checks manual key first, then environment variable
 const getClient = () => {
-  const apiKey = process.env.API_KEY;
+  const apiKey = customApiKey || process.env.API_KEY;
   // Note: If apiKey is missing in production, calls will fail with 400/403.
   // The UI should handle explaining this to the user.
   return new GoogleGenAI({ apiKey: apiKey || 'dummy-key-for-now' });
@@ -237,5 +244,8 @@ export const generateMarketingVideo = async (videoPrompt: string): Promise<strin
   const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
   if (!videoUri) throw new Error("Video generation failed");
 
-  return `${videoUri}&key=${process.env.API_KEY}`;
+  // If a custom key is set, append it manually, otherwise assume process.env is injected or handled by fetch?
+  // Actually, for download link, we need the key.
+  const apiKey = customApiKey || process.env.API_KEY;
+  return `${videoUri}&key=${apiKey}`;
 };

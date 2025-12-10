@@ -3,8 +3,8 @@ import { CourseInfo, PainPoint, AppState } from './types';
 import CourseInput from './components/CourseInput';
 import StrategySelector from './components/StrategySelector';
 import ContentGenerator from './components/ContentGenerator';
-import { analyzeCourseAndGetPainPoints } from './services/geminiService';
-import { Sparkles, AlertCircle, Settings, ExternalLink } from 'lucide-react';
+import { analyzeCourseAndGetPainPoints, setCustomApiKey } from './services/geminiService';
+import { Sparkles, AlertCircle, Settings, ExternalLink, Key } from 'lucide-react';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(AppState.INPUT_COURSE);
@@ -16,6 +16,7 @@ const App: React.FC = () => {
   // Error State
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isApiKeyError, setIsApiKeyError] = useState(false);
+  const [tempApiKey, setTempApiKey] = useState("");
 
   const handleCourseSubmit = async (info: CourseInfo) => {
     setIsLoading(true);
@@ -46,6 +47,16 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleManualKeySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tempApiKey.trim()) return;
+    
+    setCustomApiKey(tempApiKey.trim());
+    setErrorMessage(null);
+    setIsApiKeyError(false);
+    alert("API Key updated temporarily. Please try clicking 'Analyze Marketing Strategy' again.");
   };
 
   const handlePainPointSelect = (pp: PainPoint) => {
@@ -87,21 +98,37 @@ const App: React.FC = () => {
                   <div className="mt-3 text-sm text-orange-800 space-y-3">
                     <p>The application cannot access the Google Gemini API. This is usually because the environment variable is missing.</p>
                     
-                    <div className="bg-white/60 p-3 rounded-md border border-orange-200">
-                      <h4 className="font-bold mb-1">How to fix this (Deployment):</h4>
-                      <ol className="list-decimal list-inside space-y-1 ml-1">
-                        <li>Go to your host settings (e.g., Netlify, Vercel).</li>
-                        <li>Find <strong>Environment Variables</strong> (Netlify: Site configuration {'>'} Environment variables).</li>
-                        <li>Add a new variable named <code className="bg-orange-100 px-1 py-0.5 rounded font-mono text-orange-900">API_KEY</code>.</li>
-                        <li>Paste your Google Gemini API Key as the value.</li>
-                        <li><strong>Re-deploy</strong> your site for changes to take effect.</li>
-                      </ol>
+                    {/* Manual Entry Fallback */}
+                    <div className="bg-white p-4 rounded-lg border border-orange-200 shadow-sm mt-3">
+                        <h4 className="font-bold flex items-center gap-2 mb-2 text-orange-900">
+                           <Key size={16} /> Fast Fix: Enter Key Temporarily
+                        </h4>
+                        <p className="mb-3 text-xs text-orange-700">
+                           Can't find the Deploy button? Paste your key here to test the app immediately without redeploying.
+                        </p>
+                        <form onSubmit={handleManualKeySubmit} className="flex gap-2">
+                           <input 
+                             type="password" 
+                             placeholder="Paste AIza... key here"
+                             className="flex-grow border border-orange-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                             value={tempApiKey}
+                             onChange={(e) => setTempApiKey(e.target.value)}
+                           />
+                           <button 
+                             type="submit"
+                             className="bg-orange-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-orange-700 transition"
+                           >
+                             Save & Retry
+                           </button>
+                        </form>
                     </div>
 
-                    <div className="flex items-center gap-2 mt-2">
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-bold underline hover:text-orange-950">
-                            Get a Gemini API Key <ExternalLink size={12}/>
-                        </a>
+                    <div className="pt-2 border-t border-orange-200/50 mt-2">
+                      <div className="flex items-center gap-2 mt-2">
+                          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-bold underline hover:text-orange-950">
+                              Get a Gemini API Key <ExternalLink size={12}/>
+                          </a>
+                      </div>
                     </div>
                   </div>
                 ) : (
