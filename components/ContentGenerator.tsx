@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { CourseInfo, PainPoint, SlideData, VideoScriptScene } from '../types';
+import { CourseInfo, PainPoint, SlideData, VideoScriptScene, SlideContent } from '../types';
 import { generateLazyPackContent, generateSlideBackground, generateVideoScript, generateMarketingVideo } from '../services/geminiService';
-import { Image as ImageIcon, Video, Download, RefreshCw, Layers, Film, FileText, Copy, TrendingUp, Check } from 'lucide-react';
+import { Image as ImageIcon, Video, Download, RefreshCw, Layers, Film, FileText, Copy, TrendingUp, Check, Edit3 } from 'lucide-react';
 
 interface Props {
   course: CourseInfo;
@@ -96,6 +96,16 @@ const ContentGenerator: React.FC<Props> = ({ course, painPoint, onBack }) => {
         return updated;
       });
     }
+  };
+
+  // Allow users to edit slide text
+  const handleSlideTextChange = (index: number, field: keyof SlideContent, value: string) => {
+      const newSlides = [...slides];
+      newSlides[index].content = {
+          ...newSlides[index].content,
+          [field]: value
+      };
+      setSlides(newSlides);
   };
 
   const handleDownloadImage = (base64: string | undefined, index: number) => {
@@ -217,7 +227,7 @@ const ContentGenerator: React.FC<Props> = ({ course, painPoint, onBack }) => {
                <div className="flex justify-between items-center bg-orange-50 p-4 rounded-xl border border-orange-100">
                   <div>
                     <h3 className="font-bold text-orange-900">Instagram/FB Carousel</h3>
-                    <p className="text-xs text-orange-700">5 slides optimized for engagement</p>
+                    <p className="text-xs text-orange-700">5 slides. <span className="font-bold">Click text on image to edit!</span></p>
                   </div>
                   <button 
                     onClick={handleCopyCaption}
@@ -237,7 +247,12 @@ const ContentGenerator: React.FC<Props> = ({ course, painPoint, onBack }) => {
                  slides.map((slide, index) => (
                     <div key={index} className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100">
                       <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                        <span className="font-bold text-gray-700">Slide {index + 1}</span>
+                        <span className="font-bold text-gray-700 flex items-center gap-2">
+                            Slide {index + 1}
+                            <span className="text-[10px] bg-gray-200 px-2 py-0.5 rounded text-gray-500 font-normal flex items-center gap-1">
+                                <Edit3 size={10} /> Editable
+                            </span>
+                        </span>
                         <div className="flex gap-2">
                           {slide.backgroundImage && (
                             <button
@@ -265,7 +280,7 @@ const ContentGenerator: React.FC<Props> = ({ course, painPoint, onBack }) => {
                           <img 
                             src={slide.backgroundImage} 
                             alt="Background" 
-                            className="absolute inset-0 w-full h-full object-cover opacity-60 transition group-hover:scale-105 duration-700"
+                            className="absolute inset-0 w-full h-full object-cover opacity-60 transition group-hover:scale-105 duration-700 pointer-events-none"
                           />
                         ) : (
                           <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 opacity-100" />
@@ -277,14 +292,24 @@ const ContentGenerator: React.FC<Props> = ({ course, painPoint, onBack }) => {
                            </div>
                         )}
                         
-                        {/* Text Overlay */}
-                        <div className="relative z-10 p-8 max-w-md w-full">
-                          <h2 className="text-3xl md:text-4xl font-black text-white mb-4 drop-shadow-lg leading-tight break-words">
-                            {slide.content.headline}
-                          </h2>
-                          <p className="text-lg md:text-xl text-gray-100 font-medium drop-shadow-md whitespace-pre-wrap">
-                            {slide.content.subtext}
-                          </p>
+                        {/* Text Overlay - Editable Inputs */}
+                        <div className="relative z-10 p-8 max-w-md w-full flex flex-col items-center">
+                          <textarea
+                            value={slide.content.headline}
+                            onChange={(e) => handleSlideTextChange(index, 'headline', e.target.value)}
+                            rows={2}
+                            placeholder="Enter Headline..."
+                            className="bg-transparent w-full text-3xl md:text-4xl font-black text-white mb-4 drop-shadow-lg leading-tight text-center resize-none focus:outline-none focus:ring-2 focus:ring-white/50 rounded p-1 overflow-hidden"
+                          />
+                          
+                          <textarea
+                            value={slide.content.subtext}
+                            onChange={(e) => handleSlideTextChange(index, 'subtext', e.target.value)}
+                            rows={3}
+                            placeholder="Enter description..."
+                            className="bg-transparent w-full text-lg md:text-xl text-gray-100 font-medium drop-shadow-md text-center resize-none focus:outline-none focus:ring-2 focus:ring-white/50 rounded p-1"
+                          />
+
                           {index === slides.length - 1 && (
                             <div className="mt-8">
                                 <span className="bg-orange-600 text-white px-6 py-2 rounded-full font-bold shadow-lg">
@@ -295,7 +320,7 @@ const ContentGenerator: React.FC<Props> = ({ course, painPoint, onBack }) => {
                         </div>
                         
                         {/* Branding Footer */}
-                        <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2 opacity-80">
+                        <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2 opacity-80 pointer-events-none">
                            <div className="w-2 h-2 rounded-full bg-orange-500"></div>
                            <span className="text-white text-xs font-bold tracking-widest uppercase">104 Learning</span>
                         </div>
